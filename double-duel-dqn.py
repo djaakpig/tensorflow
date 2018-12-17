@@ -3,7 +3,6 @@ import numpy as np
 import random
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
-import matplotlib.pyplot as plt
 import scipy.misc
 import os
 
@@ -17,30 +16,26 @@ class QNetwork():
         # 그 다음 배열의 크기를 재조절하고 4개의 합성곱 계층을 거쳐 처리한다.
         self.scalarInput = tf.placeholder(shape=[None,21168],dtype=tf.float32)
         self.imageInput = tf.reshape(self.scalarInput,shape=[-1,84,84,3])
-        self.conv1 = slim.conv2d(inputs = self.imageInput,
-                                 num_outputs=32,
-                                 kernel_size=[8,8],
-                                 stride=[4,4],
-                                 padding='VALID',
-                                 biases_initializer=None)
-        self.conv2 = slim.conv2d(inputs=self.conv1,
-                                 num_outputs=64,
-                                 kernel_size=[4,4],
-                                 stride=[2,2],
-                                 padding='VALID',
-                                 biases_initializer=None)
-        self.conv3 = slim.conv2d(inputs=self.conv2,
-                                 num_outputs=64,
-                                 kernel_size=[3,3],
-                                 stride=[1,1],
-                                 padding='VALID',
-                                 biases_initializer=None)
-        self.conv4 = slim.conv2d(inputs=self.conv3,
-                                 num_outputs=hSize,
-                                 kernel_size=[7,7],
-                                 stride=[1,1],
-                                 padding='VALID',
-                                 biases_initializer=None)
+        with tf.variable_scope('conv2d.make'):
+            with slim.arg_scope([slim.conv2d],
+                                padding='VALID',
+                                biases_initializer=None):
+                self.conv1 = slim.conv2d(inputs=self.imageInput,
+                                         num_outputs=32,
+                                         kernel_size=[8,8],
+                                         stride=[4,4])
+                self.conv2 = slim.conv2d(inputs=self.conv1,
+                                         num_outputs=64,
+                                         kernel_size=[4,4],
+                                         stride=[2,2])
+                self.conv3 = slim.conv2d(inputs=self.conv2,
+                                         num_outputs=64,
+                                         kernel_size=[3,3],
+                                         stride=[1,1])
+                self.conv4 = slim.conv2d(inputs=self.conv3,
+                                         num_outputs=hSize,
+                                         kernel_size=[7,7],
+                                         stride=[1,1])
 
         # 마지막 합성곱 계층에서 출력값을 취한 후 이를 어드밴티지 스트림과 가치 스트림으로 분리.
         self.streamAC,self.streamVC = tf.split(self.conv4,2,3)
