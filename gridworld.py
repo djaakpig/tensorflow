@@ -53,11 +53,11 @@ class GameEnv():
         penalize = 0.
         if direction == 0 and hero.y >= 1:
             hero.y -= 1
-        if direction == 1 and hero.y <= self.sizeY-2:
+        if direction == 1 and hero.y <= self.sizeY - 2:
             hero.y += 1
         if direction == 2 and hero.x >= 1:
             hero.x -= 1
-        if direction == 3 and hero.x <= self.sizeX-2:
+        if direction == 3 and hero.x <= self.sizeX - 2:
             hero.x += 1
         if hero.x == heroX and hero.y == heroY:
             penalize = 0.0
@@ -71,7 +71,7 @@ class GameEnv():
             points.append(t)
         currentPositions = []
         for o in self.objects:
-            if (o.x,o.y) not in currentPositions:
+            if (o.x, o.y) not in currentPositions:
                 currentPositions.append((o.x, o.y))
         for p in currentPositions:
             points.remove(p)
@@ -115,12 +115,12 @@ class GameEnv():
         a = np.stack([b,c,d], axis=2)
         return a
 
-    def step(self,action):
+    def step(self, action):
         penalty = self.moveChar(action)
-        reward,done = self.checkGoal()
+        reward, done = self.checkGoal()
         state = self.renderEnv()
         if reward == None:
             print(done)
             print(reward)
             print(penalty)
-        return state, (reward+penalty), done
+        return state, (reward + penalty), done

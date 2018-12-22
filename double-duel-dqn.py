@@ -24,11 +24,11 @@ class QNetwork():
                                      (hSize, [7,7], [1,1])])
 
         # 마지막 합성곱 계층에서 출력값을 취한 후 이를 어드밴티지 스트림과 가치 스트림으로 분리.
-        self.streamAC,self.streamVC = tf.split(self.conv4, 2, 3)
+        self.streamAC, self.streamVC = tf.split(self.conv4, 2, 3)
         self.streamA = slim.flatten(self.streamAC)
         self.streamV = slim.flatten(self.streamVC)
-        self.aw = tf.Variable(tf.random_normal([hSize//2,env.actions]))
-        self.vw = tf.Variable(tf.random_normal([hSize//2,1]))
+        self.aw = tf.Variable(tf.random_normal([hSize // 2, env.actions]))
+        self.vw = tf.Variable(tf.random_normal([hSize // 2, 1]))
         self.advantage = tf.matmul(self.streamA, self.aw)
         self.value = tf.matmul(self.streamV, self.vw)
 
@@ -42,7 +42,7 @@ class QNetwork():
         self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
         self.onehotActions = tf.one_hot(self.actions, env.actions, dtype=tf.float32)
         self.Q = tf.reduce_mean(tf.multiply(self.outQ, self.onehotActions), axis=1)
-        self.error = tf.square(self.targetQ-self.Q)
+        self.error = tf.square(self.targetQ - self.Q)
         self.loss = tf.reduce_mean(self.error)
         self.trainer = tf.train.AdamOptimizer(learning_rate=0.0001)
         self.updateModel = self.trainer.minimize(self.loss)
@@ -53,8 +53,9 @@ class ExperienceBuffer():
         self.size = size
 
     def add(self, experience):
-        if len(self.buffer) + len(experience) >= self.size:
-            self.buffer[0:(len(experience)+len(self.buffer))-self.size]=[]
+        newLen = len(experience) + len(self.buffer)
+        if newLen >= self.size:
+            self.buffer[0:newLen-self.size]=[]
         self.buffer.extend(experience)
 
     def sample(self, size):
@@ -64,10 +65,10 @@ def processState(states):
     return np.reshape(states, [21168])
 
 def updateTargetGraph(tfVars, tau):
-    halfVars = len(tfVars)//2
+    halfVars = len(tfVars) // 2
     opHolders = []
-    for i,v in enumerate(tfVars[0:halfVars]):
-        opHolder = (v.value()*tau) + ((1-tau)*tfVars[i+halfVars].value())
+    for i, v in enumerate(tfVars[0:halfVars]):
+        opHolder = (v.value() * tau) + ((1 - tau) * tfVars[i+halfVars].value())
         opHolders.append(tfVars[i+halfVars].assign(opHolder))
     return opHolders
 
@@ -87,7 +88,7 @@ maxEpisodes = 20 # 허용되는 최대 에피소드 길이.
 loadModel = False # 저장된 모델을 로드할지 여부.
 path = './dqn' # 모델을 저장할 위치.
 hSize = 512 # 어드밴티지/가치 스트림으로 분리되기 전 마지막 합성곱 계층의 크기.
-tau = .001 # 타깃 네트워크를 제1 네트워크로 업데이트하는 비율.
+tau = .001 # 타깃 네트워크를 main 네트워크로 업데이트하는 비율.
 
 tf.reset_default_graph()
 mainQN = QNetwork(hSize)
@@ -101,7 +102,7 @@ historyBuffer = ExperienceBuffer()
 
 # 랜덤 액션이 감소하는 비율을 설정.
 e = startE
-stepDrop = (startE-endE)/annelingSteps
+stepDrop = (startE - endE) / annelingSteps
 
 # 보상의 총계와 에피소드 별 단계 수를 담을 리스트를 생성.
 rewardSteps = []
@@ -117,7 +118,7 @@ with tf.Session() as ss:
         print('loading model...')
         cp = tf.train.get_checkpoint_state(path)
         saver.restore(ss, cp.model_checkpoint_path)
-    # 타깃 네트워크가 제1 네트워크와 동일하도록 설정.
+    # 타깃 네트워크가 main 네트워크와 동일하도록 설정.
     updateTarget(targetOps, ss)
     for i in range(numEpisodes):
         episodeBuffer = ExperienceBuffer()
@@ -128,17 +129,17 @@ with tf.Session() as ss:
         sumRewards = 0
         j = 0
         # Q 네트워크
-        # 에이전트가 블록에 도달하기까지 최대 50호 시도하고 종료.
+        # 에이전트가 블록에 도달하기까지 maxEpisodes 만큼 시도하고 종료.
         while j < maxEpisodes:
             j += 1
             # Q 네트워크에서 (e의 확률로 랜덤한 액션과 함께) 그리디하게 액션을 선택.
             if np.random.randn(1) < e or totalSteps < preTrainSteps:
-                a = np.random.randint(0,4)
+                a = np.random.randint(0, 4)
             else:
                 feed_dict = {mainQN.scalarInput:[s]}
                 predict = ss.run(mainQN.predict, feed_dict)
                 a = predict[0]
-            s1,r,d = env.step(a)
+            s1, r, d = env.step(a)
             s1 = processState(s1)
             totalSteps += 1
             # 에피소드 버퍼에 경험을 저장.
@@ -156,9 +157,9 @@ with tf.Session() as ss:
                     input = np.vstack(trainBatches[:,3])
                     Q1 = ss.run(mainQN.predict, feed_dict={mainQN.scalarInput:input})
                     Q2 = ss.run(targetQN.outQ, feed_dict={targetQN.scalarInput:input})
-                    endMultiplier = -(trainBatches[:,4]-1)
-                    doubleQ = Q2[range(batchSize),Q1]
-                    targetQ = trainBatches[:,2] + (y*doubleQ*endMultiplier)
+                    endMultiplier = -(trainBatches[:,4] - 1)
+                    doubleQ = Q2[range(batchSize), Q1]
+                    targetQ = trainBatches[:,2] + (y * doubleQ * endMultiplier)
                     # 타깃 값을 이용해 네트워크를 업데이트.
                     feed_dict = {
                         mainQN.scalarInput:np.vstack(trainBatches[:,0]),
@@ -166,7 +167,7 @@ with tf.Session() as ss:
                         mainQN.actions:trainBatches[:,1]
                     }
                     _ = ss.run(mainQN.updateModel, feed_dict=feed_dict)
-                    # 타깃 네트워크가 제1 네트워크와 동일하도록 설정.
+                    # 타깃 네트워크가 main 네트워크와 동일하도록 설정.
                     updateTarget(targetOps, ss)
             sumRewards += r
             s = s1
@@ -180,10 +181,11 @@ with tf.Session() as ss:
 
         # 정기적으로 모델 저장.
         if i % 1000 == 0:
-            saver.save(ss, path+'/model-'+str(i)+'.cp')
-            print('saved model')
+            saver.save(ss, path + '/model-' + str(i) + '.cp')
+            print('saved model frequently')
         if len(rewards) % 10 == 0:
             print(totalSteps, np.mean(rewards[-10:]), e)
-    saver.save(ss, path+'/model-'+str(i)+'.cp')
+    saver.save(ss, path + '/model-' + str(i) + '.cp')
+    print('saved model')
 
-print('Percent of successful episodes: '+str(sum(rewards)/numEpisodes))
+print('percent of successful episodes: ' + str(sum(rewards) / numEpisodes))
